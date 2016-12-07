@@ -20,6 +20,8 @@ original_files = []
 mmc_lst = []
 destination_path = ""
 directory = ""
+speed_23976 = True
+speed_24 = False
 
 
 class UpdateXml(QtCore.QThread):
@@ -39,12 +41,46 @@ class UpdateXml(QtCore.QThread):
             mmc_xml = etree.parse(mmc)
             mmc_root = mmc_xml.getroot()
 
-            for sub in mmc_root.findall(path=".//md:FrameRate", namespaces=nsmap):
-                if sub.get("multiplier") == "999/1000":
-                    sub.set("multiplier", "1000/1001")
+            for sub in mmc_root.findall(path=".//manifest:Subtitle", namespaces=nsmap):
+                if sub.find(
+                        path=".//md:Encoding/md:FrameRate",
+                        namespaces=nsmap) is not None:
 
-                if sub.get("timecode") == "NDF":
-                    sub.set("timecode", "NonDrop")
+                    if sub.find(
+                            path=".//md:Encoding/md:FrameRate",
+                            namespaces=nsmap).get("multiplier") is not None:
+
+                        if speed_23976:
+                            sub.find(
+                                path=".//md:Encoding/md:FrameRate",
+                                namespaces=nsmap).set("multiplier", "1000/1001")
+
+                        else:
+                            del sub.find(
+                                path=".//md:Encoding/md:FrameRate",
+                                namespaces=nsmap).attrib["multiplier"]
+
+                    if sub.find(
+                            path=".//md:Encoding/md:FrameRate",
+                            namespaces=nsmap).get("timecode") is not None:
+                        sub.find(
+                            path=".//md:Encoding/md:FrameRate",
+                            namespaces=nsmap).set("timecode", "NonDrop")
+
+                else:
+                    # encoding = etree.SubElement(sub, '{md:http://www.movielabs.com/schema/md/v2.4/md}Encoding')
+                    # framerate = etree.SubElement(
+                    #     encoding,
+                    #     '{md:http://www.movielabs.com/schema/md/v2.4/md}FrameRate',
+                    #     attrib={"multiplier": "999/1000", "timecode": "NDF"})
+
+                    if speed_23976:
+                        encoding = etree.fromstring('<md:Encoding xmlns:md="http://www.movielabs.com/schema/md/v2.4/md"><md:FrameRate xmlns:md="http://www.movielabs.com/schema/md/v2.4/md" multiplier="1000/1001" timecode="NonDrop">24</md:FrameRate></md:Encoding>')
+                        sub.insert(2, encoding)
+
+                    else:
+                        encoding = etree.fromstring('<md:Encoding xmlns:md="http://www.movielabs.com/schema/md/v2.4/md"><md:FrameRate xmlns:md="http://www.movielabs.com/schema/md/v2.4/md" timecode="NonDrop">24</md:FrameRate></md:Encoding>')
+                        sub.insert(2, encoding)
 
             tree = etree.ElementTree(mmc_root)
             os.chdir(destination_path)
@@ -92,11 +128,8 @@ class FramerateApp(QtGui.QMainWindow, main_frame.Ui_AmazonFramerateApp):
         global original_files
         global mmc_lst
 
-        while original_files:
-            original_files.pop()
-
-        while mmc_lst:
-            mmc_lst.pop()
+        original_files = []
+        mmc_lst = []
         self.original_text.clear()
 
     def destination_dlg(self):
@@ -115,6 +148,9 @@ class FramerateApp(QtGui.QMainWindow, main_frame.Ui_AmazonFramerateApp):
             directory = destination_path
 
     def process(self):
+        global speed_23976
+        global speed_24
+
         if not original_files:
             files_msg = QtGui.QMessageBox()
             files_msg.setIcon(QtGui.QMessageBox.Information)
@@ -132,6 +168,14 @@ class FramerateApp(QtGui.QMainWindow, main_frame.Ui_AmazonFramerateApp):
             dest_msg.setStandardButtons(QtGui.QMessageBox.Ok)
             dest_msg.exec_()
             return
+
+        if self.check_23976.isChecked():
+            speed_23976 = True
+            speed_24 = False
+
+        elif self.check_24.isChecked():
+            speed_23976 = False
+            speed_24 = True
 
         self.connect(self.update_xml_thread, QtCore.SIGNAL("finished()"), self.update_xml_done)
         self.update_xml_thread.start()
