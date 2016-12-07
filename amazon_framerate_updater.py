@@ -38,7 +38,8 @@ class UpdateXml(QtCore.QThread):
         }
 
         for mmc in mmc_lst:
-            mmc_xml = etree.parse(mmc)
+            parser = etree.XMLParser(remove_blank_text=True)
+            mmc_xml = etree.parse(mmc, parser)
             mmc_root = mmc_xml.getroot()
 
             for sub in mmc_root.findall(path=".//manifest:Subtitle", namespaces=nsmap):
@@ -68,18 +69,24 @@ class UpdateXml(QtCore.QThread):
                             namespaces=nsmap).set("timecode", "NonDrop")
 
                 else:
-                    # encoding = etree.SubElement(sub, '{md:http://www.movielabs.com/schema/md/v2.4/md}Encoding')
-                    # framerate = etree.SubElement(
-                    #     encoding,
-                    #     '{md:http://www.movielabs.com/schema/md/v2.4/md}FrameRate',
-                    #     attrib={"multiplier": "999/1000", "timecode": "NDF"})
-
                     if speed_23976:
-                        encoding = etree.fromstring('<md:Encoding xmlns:md="http://www.movielabs.com/schema/md/v2.4/md"><md:FrameRate xmlns:md="http://www.movielabs.com/schema/md/v2.4/md" multiplier="1000/1001" timecode="NonDrop">24</md:FrameRate></md:Encoding>')
+                        encoding = etree.Element(
+                            '{%s}Encoding' % nsmap["md"], nsmap=nsmap)
+                        framerate = etree.SubElement(
+                            encoding,
+                            '{%s}FrameRate' % nsmap["md"],
+                            attrib={"multiplier": "1000/1001", "timecode": "NonDrop"}, nsmap=nsmap)
+                        framerate.text = "24"
                         sub.insert(2, encoding)
 
                     else:
-                        encoding = etree.fromstring('<md:Encoding xmlns:md="http://www.movielabs.com/schema/md/v2.4/md"><md:FrameRate xmlns:md="http://www.movielabs.com/schema/md/v2.4/md" timecode="NonDrop">24</md:FrameRate></md:Encoding>')
+                        encoding = etree.Element(
+                            '{%s}Encoding' % nsmap["md"], nsmap=nsmap)
+                        framerate = etree.SubElement(
+                            encoding,
+                            '{%s}FrameRate' % nsmap["md"],
+                            attrib={"timecode": "NonDrop"}, nsmap=nsmap)
+                        framerate.text = "24"
                         sub.insert(2, encoding)
 
             tree = etree.ElementTree(mmc_root)
