@@ -69,6 +69,9 @@ class UpdateXml(QtCore.QThread):
                             namespaces=nsmap).set("timecode", "NonDrop")
 
                 else:
+                    language = sub.find(path=".//md:Language", namespaces=nsmap)
+                    language_index = list(sub).index(language)
+
                     if speed_23976:
                         encoding = etree.Element(
                             '{%s}Encoding' % nsmap["md"], nsmap=nsmap)
@@ -77,7 +80,7 @@ class UpdateXml(QtCore.QThread):
                             '{%s}FrameRate' % nsmap["md"],
                             attrib={"multiplier": "1000/1001", "timecode": "NonDrop"}, nsmap=nsmap)
                         framerate.text = "24"
-                        sub.insert(2, encoding)
+                        sub.insert(language_index + 1, encoding)
 
                     else:
                         encoding = etree.Element(
@@ -87,7 +90,7 @@ class UpdateXml(QtCore.QThread):
                             '{%s}FrameRate' % nsmap["md"],
                             attrib={"timecode": "NonDrop"}, nsmap=nsmap)
                         framerate.text = "24"
-                        sub.insert(2, encoding)
+                        sub.insert(language_index + 1, encoding)
 
             tree = etree.ElementTree(mmc_root)
             os.chdir(destination_path)
