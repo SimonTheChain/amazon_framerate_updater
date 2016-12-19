@@ -5,6 +5,8 @@
 #
 # Author: Simon Lachaîne
 
+# add verif if xml cannot be parsed
+
 
 import os
 import sys
@@ -22,6 +24,7 @@ destination_path = ""
 directory = ""
 speed_23976 = True
 speed_24 = False
+speed_25 = False
 
 
 class UpdateXml(QtCore.QThread):
@@ -82,7 +85,7 @@ class UpdateXml(QtCore.QThread):
                         framerate.text = "24"
                         sub.insert(language_index + 1, encoding)
 
-                    else:
+                    elif speed_24:
                         encoding = etree.Element(
                             '{%s}Encoding' % nsmap["md"], nsmap=nsmap)
                         framerate = etree.SubElement(
@@ -90,6 +93,16 @@ class UpdateXml(QtCore.QThread):
                             '{%s}FrameRate' % nsmap["md"],
                             attrib={"timecode": "NonDrop"}, nsmap=nsmap)
                         framerate.text = "24"
+                        sub.insert(language_index + 1, encoding)
+
+                    elif speed_25:
+                        encoding = etree.Element(
+                            '{%s}Encoding' % nsmap["md"], nsmap=nsmap)
+                        framerate = etree.SubElement(
+                            encoding,
+                            '{%s}FrameRate' % nsmap["md"],
+                            attrib={"timecode": "NonDrop"}, nsmap=nsmap)
+                        framerate.text = "25"
                         sub.insert(language_index + 1, encoding)
 
             tree = etree.ElementTree(mmc_root)
@@ -160,6 +173,7 @@ class FramerateApp(QtGui.QMainWindow, main_frame.Ui_AmazonFramerateApp):
     def process(self):
         global speed_23976
         global speed_24
+        global speed_25
 
         if not original_files:
             files_msg = QtGui.QMessageBox()
@@ -182,10 +196,17 @@ class FramerateApp(QtGui.QMainWindow, main_frame.Ui_AmazonFramerateApp):
         if self.check_23976.isChecked():
             speed_23976 = True
             speed_24 = False
+            speed_25 = False
 
         elif self.check_24.isChecked():
             speed_23976 = False
             speed_24 = True
+            speed_25 = False
+
+        elif self.check_25.isChecked():
+            speed_23976 = False
+            speed_24 = False
+            speed_25 = True
 
         self.connect(self.update_xml_thread, QtCore.SIGNAL("finished()"), self.update_xml_done)
         self.update_xml_thread.start()
